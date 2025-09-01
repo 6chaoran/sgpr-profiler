@@ -11,7 +11,7 @@ export default defineNuxtConfig({
         region: 'asia-east1',
         maxInstances: 1,
       },
-      nodeVersion: '20' // Can be '16' or '18' or '20'
+      nodeVersion: '18' // Can be '16' or '18' or '20'
     },
   },
 })
