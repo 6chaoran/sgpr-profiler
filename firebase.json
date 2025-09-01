@@ -1,14 +1,6 @@
 {
   "hosting": {
     "public": ".output/public",
-    "site": "sgprapp",
-    "cleanUrls": true,
-    "rewrites": [
-      {
-        "source": "**",
-        "function": "server"
-      }
-    ],
     "ignore": [
       "firebase.json",
       "**/.*",

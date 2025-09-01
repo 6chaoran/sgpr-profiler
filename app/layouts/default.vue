@@ -1,5 +1,6 @@
 <template>
     <div class="flex flex-col">
+        <!-- header -->
         <div class="flex sticky bg-default/75 backdrop-blur border-b border-default top-0 z-50 
             h-16 px-4">
             <div class="flex items-center h-full text-green-500 font-bold gap-x-1">
@@ -15,8 +16,9 @@
         <div class="mt-3 px-6">
             <NuxtPage />
         </div>
+        <!-- footer  -->
         <div class="fixed z-50 bottom-0 left-0 w-full h-16 flex items-center
-         border-t border-default justify-around">
+         border-t border-default justify-around bg-default/75 backdrop-blur">
             <p class="flex flex-col items-center text-green-500"><u-icon name="heroicons:home"
                     class="size-5" />Home</p>
             <p class="flex flex-col items-center text-green-500"><u-icon name="heroicons:magnifying-glass"
