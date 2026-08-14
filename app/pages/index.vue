@@ -5,27 +5,30 @@
         <div>navigate your PR journey with confidence</div>
         <u-separator class="my-6">Recent records</u-separator>
         <div class="mt-3 flex flex-col gap-3">
-            <u-card v-for="rec in records" v-if="dataLoaded" :key="rec.text" variant="outline">
+            <template v-if="dataLoaded">
+                <u-card v-for="rec in records" :key="rec.text" variant="outline">
                     <div class="flex-1 flex-col justify-between">
-                    <div class="flex justify-between items-center">
-                        <div class="font-bold">{{ rec.user }}</div>
-                        <div class="text-sm text-gray-500 dark:text-white">{{ rec.to }}</div>
+                        <div class="flex justify-between items-center">
+                            <div class="font-bold">{{ rec.user }}</div>
+                            <div class="text-sm text-gray-500 dark:text-white">{{ rec.to }}</div>
+                        </div>
+                        <!-- <div>{{ rec.text }}</div> -->
                     </div>
-                    <!-- <div>{{ rec.text }}</div> -->
-                </div>
                     <div>
-                        <u-timeline size="sm" class="w-full mt-3 -mb-6" :default-value="0"
+                        <u-timeline
+size="sm" class="w-full mt-3 -mb-6" :default-value="0"
                             reverse
                             :color="rec.result === '通过' ? 'success' : (rec.result === '等待' ? 'warning' : 'error')"
                             :items="[{ date: rec.from, icon: 'i-lucide-code', description: rec.text },
-                                     { date: rec.to.slice(0, 10), icon: rec.result === '通过' ? 'i-lucide-check-circle' : (rec.result === '等待' ? 'i-lucide-clock' : 'i-lucide-x-circle')}]">
-                        </u-timeline>
+                                     { date: rec.to.slice(0, 10), icon: rec.result === '通过' ? 'i-lucide-check-circle' : (rec.result === '等待' ? 'i-lucide-clock' : 'i-lucide-x-circle')}]"/>
                     </div>
-                
-            </u-card>
-            <u-card v-for="value in [1, 2, 3, 4, 5, 6]" :key="value" v-else>
-                <skeleton />
-            </u-card>
+                </u-card>
+            </template>
+            <template v-else>
+                <u-card v-for="value in [1, 2, 3, 4, 5, 6]" :key="value">
+                    <app-skeleton />
+                </u-card>
+            </template>
         </div>
     </div>
 </template>
