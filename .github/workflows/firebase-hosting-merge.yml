@@ -6,15 +6,31 @@ on:
   push:
     branches:
       - main
+permissions:
+  contents: read
+concurrency:
+  group: firebase-hosting-production
+  cancel-in-progress: true
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run generate
+      - run: npm run verify:release
+      - id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SGPRAPP }}
           channelId: live
           projectId: sgprapp
+      - name: Smoke test deployed site
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.details_url }}
+        run: curl --fail --location --retry 5 --retry-all-errors "$DEPLOY_URL" | grep -q 'SGPR Profiler'

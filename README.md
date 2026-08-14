@@ -1,6 +1,6 @@
-# Nuxt Minimal Starter
+# SGPR Profiler
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A Nuxt application for browsing Singapore permanent-residency application records.
 
 ## Setup
 
@@ -40,36 +40,19 @@ bun run dev
 
 ## Production
 
-Build the application for production:
+Generate the static Firebase Hosting release and verify its entry page:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+npm run generate
+npm run verify:release
 ```
 
-Locally preview production build:
+The GitHub Actions workflows deploy `.output/public` to Firebase Hosting. After
+Firebase reports a deployment, the workflows request the deployed URL and verify
+that the response contains the application title.
+
+Locally preview the generated site:
 
 ```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+npx serve .output/public
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
