@@ -38,6 +38,18 @@ yarn dev
 bun run dev
 ```
 
+## Firebase Realtime Database
+
+The recent-records list listens to the `pr_records` node in the SGPR Firebase
+Realtime Database. Override the node when needed:
+
+```bash
+NUXT_PUBLIC_FIREBASE_DATABASE_PATH=your/path npm run dev
+```
+
+The listener displays the 50 most recently updated records and updates the page
+whenever that data changes.
+
 ## Production
 
 Generate the static Firebase Hosting release and verify its entry page:

@@ -13,4 +13,18 @@ export default defineNuxtConfig({
       scan: true,
     },
   },
+  runtimeConfig: {
+    public: {
+      firebase: {
+        apiKey: 'AIzaSyBABCJoHV9hf3MlEmH_xB5eZax3OHWlcS0',
+        appId: '1:452990261863:web:59983f7958ab6295dd92c2',
+        authDomain: 'sgprapp.firebaseapp.com',
+        databaseURL: 'https://sgprapp-default-rtdb.asia-southeast1.firebasedatabase.app',
+        messagingSenderId: '452990261863',
+        projectId: 'sgprapp',
+        storageBucket: 'sgprapp.appspot.com',
+      },
+      firebaseDatabasePath: 'pr_records',
+    },
+  },
 })
