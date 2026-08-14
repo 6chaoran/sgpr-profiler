@@ -31,6 +31,4 @@ jobs:
           channelId: live
           projectId: sgprapp
       - name: Smoke test deployed site
-        env:
-          DEPLOY_URL: ${{ steps.deploy.outputs.details_url }}
-        run: curl --fail --location --retry 5 --retry-all-errors "$DEPLOY_URL" | grep -q 'SGPR Profiler'
+        run: curl --fail --location --retry 5 --retry-all-errors https://sgprapp.web.app/ | grep -q 'SGPR Profiler'
