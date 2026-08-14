@@ -2,8 +2,11 @@
   "name": "nuxt-app",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
-    "build": "nuxt build",
+    "build": "nuxt generate",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
