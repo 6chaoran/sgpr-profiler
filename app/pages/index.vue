@@ -3,6 +3,10 @@
     <section class="infographic-hero">
       <h1>How long might I wait—and what are my chances—if I apply for PR in Singapore?</h1>
       <p>Explore waiting time and success rate for profiles like yours.</p>
+      <p class="last-updated">
+        <span aria-hidden="true" />
+        Data last updated <time :datetime="lastUpdatedIso">{{ lastUpdatedLabel }}</time>
+      </p>
     </section>
 
     <section class="refine-rail" aria-label="Profile segment filters">
@@ -105,6 +109,13 @@ const normalise = (value: unknown) => String(value ?? '').toLowerCase()
 const isApproved = (record: Rec) => ['通过', 'approved', 'success', 'pass'].includes(normalise(record.result))
 const isPending = (record: Rec) => ['等待', 'pending', 'processing'].includes(normalise(record.result))
 const timestamp = (value: string) => Date.parse(value) || 0
+const lastUpdatedTimestamp = computed(() => Math.max(...source.value.map(record => timestamp(record.to) || timestamp(record.closed))))
+const lastUpdatedIso = computed(() => new Date(lastUpdatedTimestamp.value).toISOString().slice(0, 10))
+const lastUpdatedLabel = computed(() => new Intl.DateTimeFormat('en-SG', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+}).format(lastUpdatedTimestamp.value))
 const duration = (record: Rec) => {
   const start = timestamp(record.from)
   const end = timestamp(record.closed && record.closed !== 'None' ? record.closed : record.to)
