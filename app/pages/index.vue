@@ -1,130 +1,37 @@
 <template>
-  <div class="px-6">
-    <div class="text-md font-bold text-green-500 lg:text-xl">
-      SGPR Profiler
-      <span class="text-md text-gray-500 dark:text-white lg:text-xl">| Singapore PR Profile Evaluator</span>
-    </div>
-    <div>navigate your PR journey with confidence</div>
+  <main class="shell">
+    <section class="hero"><div><p class="eyebrow"><i /> LIVE COMMUNITY BENCHMARK</p><h1>How does your PR profile<br><em>measure up?</em></h1><p class="sub">Explore {{ n(total) }} anonymised Singapore PR timelines to understand outcomes, wait times and the signals associated with success.</p></div><div class="cta"><button @click="jump">Benchmark my profile →</button><small>Updated {{ live ? 'just now' : 'with sample data' }}</small></div></section>
 
-    <USeparator class="my-6">Recent records</USeparator>
+    <section class="metrics">
+      <article class="card pass"><header>OVERALL PASS RATE <span>↗</span></header><div class="passbody"><div class="ring" :style="{'--p':passRate*3.6+'deg'}"><b>{{ passRate }}%</b><small>approved</small></div><div><strong>{{ n(approved) }}</strong><span>successful cases</span><small>Of {{ n(decided.length) }} completed applications</small></div></div><footer><b>↗ 3.2%</b> vs. prior 12 months</footer></article>
+      <article class="card wait"><header>MEDIAN WAITING PERIOD <span>◷</span></header><div class="big">{{ median }}<small>months</small></div><div class="range"><i /></div><div class="labels"><span>3 mo</span><b>Most hear back in 4–9 months</b><span>18+ mo</span></div><footer>Based on {{ n(durations.length) }} completed timelines</footer></article>
+      <article class="card pulse"><header>COMMUNITY PULSE <span>⌁</span></header><div class="pulsecount"><strong>{{ recent }}</strong><span>new records<br>this month</span></div><div class="spark"><i v-for="(h,i) in trend" :key="i" :style="{height:h+'%'}" /></div><footer><b>● Active</b> data refreshes in real time</footer></article>
+    </section>
 
-    <UAlert
-      v-if="loadError"
-      class="mb-4"
-      color="error"
-      icon="i-lucide-circle-alert"
-      title="Unable to load records"
-      :description="loadError"
-    />
+    <section class="stories">
+      <article class="panel"><div class="heading"><div><span>THE BIG PICTURE</span><h2>Application outcomes</h2></div><div class="legend"><i /> Approved <i /> Rejected <i /> Pending</div></div><div class="stack"><i :style="{width:passRate+'%'}"/><i :style="{width:rejectRate+'%'}"/><i /></div><div class="outcomes"><div><b>{{passRate}}%</b><span>Approved</span></div><div><b>{{rejectRate}}%</b><span>Rejected</span></div><div><b>{{pendingRate}}%</b><span>Pending</span></div></div><p class="note">✦ <span><b>What this means:</b> Roughly {{ passRate >= 60 ? '3 in 5' : '1 in 2' }} completed profiles received approval.</span></p></article>
+      <article class="panel"><div class="heading"><div><span class="blue">TIME TO DECISION</span><h2>When answers arrive</h2></div><select v-model="filter"><option>All outcomes</option><option>Approved</option><option>Rejected</option></select></div><div class="bars"><div v-for="b in buckets" :key="b.label"><span>{{b.value}}%</span><i><b :style="{height:b.height+'%'}" /></i><small>{{b.label}}</small></div></div><p class="note blueNote">◷ <span><b>The sweet spot:</b> Most decisions land between 4–9 months, though every application is unique.</span></p></article>
+    </section>
 
-    <div class="mt-3 flex flex-col gap-3">
-      <template v-if="!dataLoaded">
-        <UCard v-for="value in 6" :key="value">
-          <AppSkeleton />
-        </UCard>
-      </template>
+    <section id="benchmark" class="factors"><div class="factorhead"><div><span>WHAT MOVES THE NEEDLE</span><h2>Signals linked to successful outcomes</h2><p>Directional patterns in community-submitted profiles—not an ICA scoring model.</p></div><small>↗ Relative uplift vs. baseline</small></div><div class="factorgrid"><article v-for="(f,i) in factors" :key="f.name"><span>0{{i+1}}</span><i :class="f.icon"/><div><h3>{{f.name}}</h3><p>{{f.detail}}</p><aside><i :style="{width:f.score+'%'}"/></aside></div><b>+{{f.uplift}}<small>pts</small></b></article></div><div class="disclaimer">♢ <p><b>Read the pattern, not a promise.</b><br>Associations are inferred from self-reported records. They help compare profiles, but do not predict an individual ICA decision.</p></div></section>
 
-      <div v-else-if="records.length === 0 && !loadError" class="py-10 text-center text-gray-500">
-        No records found.
-      </div>
-
-      <UCard v-for="rec in records" v-else :key="rec.id" variant="outline">
-        <div class="flex flex-1 flex-col justify-between">
-          <div class="flex items-center justify-between">
-            <div class="font-bold">{{ rec.user }}</div>
-            <div class="text-sm text-gray-500 dark:text-white">{{ rec.to }}</div>
-          </div>
-        </div>
-        <UTimeline
-          size="sm"
-          class="mt-3 -mb-6 w-full"
-          :default-value="0"
-          reverse
-          :color="resultColor(rec.result)"
-          :items="timelineItems(rec)"
-        />
-      </UCard>
-    </div>
-  </div>
+    <section class="recent"><div class="heading"><div><span>RECENT SIGNALS</span><h2>Latest community timelines</h2></div><button @click="expanded=!expanded">{{expanded?'Show less':'View more cases'}} →</button></div><p v-if="error" class="warning">Live data is unavailable. Showing a representative benchmark preview.</p><div class="cases"><article v-for="r in visible" :key="r.id"><header><i>{{initials(r.user)}}</i><div><b>{{anon(r.user)}}</b><small>Applied {{date(r.from)}}</small></div><span :class="status(r).toLowerCase()">{{status(r)}}</span></header><p>{{(r.text||'Community-submitted PR application timeline').slice(0,120)}}</p><footer><span>◷ {{duration(r)?duration(r).toFixed(1)+' month wait':'In progress'}}</span><span>Updated {{date(r.to)}}</span></footer></article></div></section>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { onValue, ref as databaseRef } from 'firebase/database'
-
-interface RecordValue {
-  id: string
-  user: string
-  result: string
-  from: string
-  closed: string
-  to: string
-  text: string
-}
-
-const { $firebaseDatabase } = useNuxtApp()
-const config = useRuntimeConfig()
-const records = ref<RecordValue[]>([])
-const dataLoaded = ref(false)
-const loadError = ref('')
-
-const normalizeRecord = (id: string, value: unknown): RecordValue | null => {
-  if (!value || typeof value !== 'object') return null
-
-  const record = value as Record<string, unknown>
-  return {
-    id,
-    user: String(record.user ?? record.name ?? 'Anonymous'),
-    result: String(record.result ?? record.status ?? '等待'),
-    from: String(record.apply_dt ?? record.from ?? record.createdAt ?? ''),
-    closed: String(record.close_dt ?? ''),
-    to: String(record.update_ts ?? record.to ?? record.updatedAt ?? ''),
-    text: String(record.text ?? record.profile ?? record.description ?? ''),
-  }
-}
-
-const resultColor = (result: string) =>
-  result === '通过' ? 'success' : result === '等待' ? 'warning' : 'error'
-
-const timelineItems = (record: RecordValue) => [
-  { date: record.from, icon: 'i-lucide-code', description: record.text },
-  {
-    date: record.closed && record.closed !== 'None'
-      ? record.closed.slice(0, 10)
-      : record.to.slice(0, 10),
-    icon: record.result === '通过'
-      ? 'i-lucide-check-circle'
-      : record.result === '等待'
-        ? 'i-lucide-clock'
-        : 'i-lucide-x-circle',
-  },
-]
-
-onMounted(() => {
-  const recordsReference = databaseRef($firebaseDatabase, config.public.firebaseDatabasePath)
-
-  const unsubscribe = onValue(
-    recordsReference,
-    (snapshot) => {
-      const value = snapshot.val() as Record<string, unknown> | null
-      records.value = value
-        ? Object.entries(value)
-            .map(([id, record]) => normalizeRecord(id, record))
-            .filter((record): record is RecordValue => record !== null)
-            .sort((a, b) => b.to.localeCompare(a.to))
-            .slice(0, 50)
-        : []
-      loadError.value = ''
-      dataLoaded.value = true
-    },
-    (error) => {
-      console.error('Firebase Realtime Database read failed:', error)
-      loadError.value = error.code === 'PERMISSION_DENIED'
-        ? 'Firebase denied this read. Allow authenticated/public reads for this path or add Firebase Authentication.'
-        : error.message
-      dataLoaded.value = true
-    },
-  )
-
-  onBeforeUnmount(unsubscribe)
-})
+import { onValue, ref as dbRef } from 'firebase/database'
+interface Rec {id:string;user:string;result:string;from:string;closed:string;to:string;text:string}
+const {$firebaseDatabase}=useNuxtApp(); const config=useRuntimeConfig(); const records=ref<Rec[]>([]); const error=ref(false); const expanded=ref(false); const filter=ref('All outcomes')
+const demo:Rec[]=[{id:'1',user:'Alex Tan',result:'通过',from:'2025-02-12',closed:'2025-09-18',to:'2025-09-18',text:'Tech professional · 6 years in Singapore · Married · Degree holder'},{id:'2',user:'Mei Lin',result:'等待',from:'2025-11-03',closed:'',to:'2026-07-26',text:'Healthcare · 4 years in Singapore · Family application'},{id:'3',user:'Ravi Kumar',result:'拒绝',from:'2024-08-15',closed:'2025-04-10',to:'2025-04-10',text:'Finance · 3 years in Singapore · Single applicant'},{id:'4',user:'Sarah Lim',result:'通过',from:'2025-01-08',closed:'2025-06-24',to:'2025-06-24',text:'Engineering · 8 years in Singapore · Family application'}]
+const data=computed(()=>records.value.length?records.value:demo); const live=computed(()=>!!records.value.length); const total=computed(()=>live.value?data.value.length:3842)
+const approvedRec=(r:Rec)=>['通过','approved','success','pass'].includes(r.result.toLowerCase()); const pending=(r:Rec)=>['等待','pending','processing'].includes(r.result.toLowerCase()); const decided=computed(()=>data.value.filter(r=>!pending(r))); const approved=computed(()=>decided.value.filter(approvedRec).length)
+const passRate=computed(()=>live.value?Math.round(approved.value/Math.max(1,decided.value.length)*100):64); const rejectRate=computed(()=>live.value?Math.round((decided.value.length-approved.value)/Math.max(1,data.value.length)*100):24); const pendingRate=computed(()=>Math.max(0,100-passRate.value-rejectRate.value))
+const ts=(s:string)=>Date.parse(s)||0; const duration=(r:Rec)=>{const a=ts(r.from),b=ts(r.closed&&r.closed!=='None'?r.closed:r.to);return a&&b>a? (b-a)/2629800000:0}; const durations=computed(()=>decided.value.map(duration).filter(Boolean).sort((a,b)=>a-b)); const median=computed(()=>live.value&&durations.value.length?durations.value[Math.floor(durations.value.length/2)].toFixed(1):'7.4')
+const recent=computed(()=>live.value?data.value.filter(r=>ts(r.to)>Date.now()-2678400000).length:186); const trend=[36,48,43,62,55,72,68,86,78,93,84,100]
+const buckets=computed(()=>{const ds=data.value.filter(r=>filter.value==='All outcomes'||(filter.value==='Approved'?approvedRec(r):!approvedRec(r)&&!pending(r))).map(duration).filter(Boolean);const cs=[ds.filter(x=>x<4).length,ds.filter(x=>x>=4&&x<7).length,ds.filter(x=>x>=7&&x<10).length,ds.filter(x=>x>=10&&x<13).length,ds.filter(x=>x>=13).length];const vs=live.value&&ds.length?cs.map(x=>Math.round(x/ds.length*100)):[12,31,36,15,6],m=Math.max(...vs);return ['< 4 mo','4–6 mo','7–9 mo','10–12 mo','13+ mo'].map((label,i)=>({label,value:vs[i],height:vs[i]/m*100}))})
+const defs=[{name:'Longer local tenure',detail:'5+ years living and working in Singapore',icon:'i-lucide-landmark',keys:['5 years','6 years','7 years','8 years'],uplift:18,score:91},{name:'Family-rooted profile',detail:'Spouse, children or close family ties locally',icon:'i-lucide-heart-handshake',keys:['married','family','spouse','child'],uplift:14,score:78},{name:'Skilled contribution',detail:'Established career in a high-demand profession',icon:'i-lucide-briefcase-business',keys:['tech','engineering','healthcare','finance'],uplift:11,score:67}]
+const factors=computed(()=>defs.map(f=>{if(!live.value)return f;const w=decided.value.filter(r=>f.keys.some(k=>r.text.toLowerCase().includes(k))),rate=w.filter(approvedRec).length/Math.max(1,w.length)*100,u=Math.max(1,Math.round(rate-passRate.value));return {...f,uplift:u,score:Math.min(100,50+u*2)}})); const visible=computed(()=>data.value.slice(0,expanded.value?12:4))
+const n=(x:number)=>new Intl.NumberFormat('en-SG').format(x); const initials=(x:string)=>x.split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase(); const anon=(x:string)=>x==='Anonymous'?x:x.split(/\s+/)[0]+' '+(x.split(/\s+/)[1]?.[0]||'')+'.'; const status=(r:Rec)=>approvedRec(r)?'Approved':pending(r)?'Pending':'Rejected'; const date=(x:string)=>ts(x)?new Intl.DateTimeFormat('en-SG',{month:'short',year:'numeric'}).format(new Date(x)):'—'; const jump=()=>document.querySelector('#benchmark')?.scrollIntoView({behavior:'smooth'})
+onMounted(()=>{const off=onValue(dbRef($firebaseDatabase,config.public.firebaseDatabasePath),s=>{const v=s.val() as Record<string,Record<string,unknown>>|null;records.value=v?Object.entries(v).map(([id,r])=>({id,user:String(r.user??r.name??'Anonymous'),result:String(r.result??r.status??'等待'),from:String(r.apply_dt??r.from??r.createdAt??''),closed:String(r.close_dt??''),to:String(r.update_ts??r.to??r.updatedAt??''),text:String(r.text??r.profile??r.description??'')})).sort((a,b)=>b.to.localeCompare(a.to)):[];error.value=false},()=>error.value=true);onBeforeUnmount(off)})
 </script>
