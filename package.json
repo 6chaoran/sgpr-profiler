@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "verify:release": "test -f .output/public/index.html && grep -q 'SGPR Profiler' .output/public/index.html",
+    "verify:release": "test -s .output/public/index.html && grep --fixed-strings --quiet '<title>PRscope — Singapore PR Community Benchmark</title>' .output/public/index.html",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
