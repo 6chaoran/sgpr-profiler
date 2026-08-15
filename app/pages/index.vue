@@ -1,103 +1,50 @@
 <template>
-  <main class="benchmark-page">
-    <section class="hero">
-      <div>
-        <h1>How long and how likely:<br>Outcomes for your profile</h1>
-        <p>Benchmarks are based on completed Singapore PR applications<br>from the PRscope community.</p>
-      </div>
-      <aside>
-        <b>About the data</b>
-        <p>Community-shared PR outcomes completed between January 2021 and June 2026. Data as of August 15, 2026.</p>
-      </aside>
+  <main class="infographic-page">
+    <section class="infographic-hero">
+      <h1>How long might I wait—and what are my chances—if I apply for PR in Singapore?</h1>
+      <p>Explore waiting time and success rate for profiles like yours.</p>
     </section>
 
-    <section class="profile-filters" aria-label="Profile segment filters">
+    <section class="refine-rail" aria-label="Profile segment filters">
+      <strong>Refine your profile</strong>
       <label v-for="field in filterFields" :key="field.key">
         <span>{{ field.label }}</span>
         <select v-model="filters[field.key]" :aria-label="field.label">
           <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
         </select>
       </label>
-      <button type="button" @click="resetFilters">
-        <UIcon name="i-lucide-rotate-ccw" /> Reset
-      </button>
+      <button type="button" @click="resetFilters">Reset</button>
     </section>
-
-    <div class="segment-summary" aria-live="polite">
-      <span><i />Your selected profile segment</span>
-      <b>{{ n(displayCount) }} completed applications</b>
-    </div>
 
     <p v-if="error" class="data-alert">Live data is temporarily unavailable. Showing a representative benchmark preview.</p>
 
-    <section v-if="filteredCompleted.length" class="data-section waiting-section">
-      <header class="section-intro">
-        <span>1. Waiting time to decision</span>
-        <p>Distribution of decision waiting time in months for completed applications in your selected segment.</p>
-        <dl>
-          <dt>Median (middle point)</dt>
-          <dd>{{ median }} months</dd>
-        </dl>
-      </header>
-
-      <div class="dotplot" role="img" :aria-label="`Waiting-time distribution. Median ${median} months.`">
-        <div class="median-marker" :style="{ left: `${scaleMonth(Number(median))}%` }">
-          <span>Median waiting time<br><b>{{ median }} months</b></span>
-        </div>
-        <div class="middle-range" :style="rangeStyle">
-          <span>Middle 50% of cases<br><b>{{ quartiles.q1 }}–{{ quartiles.q3 }} months</b></span>
-        </div>
-        <div class="eighty-marker" :style="{ left: `${scaleMonth(eightyPercent)}%` }">
-          <span>80% of cases decided within<br><b>{{ eightyPercent }} months or less</b></span>
-        </div>
-        <i
-          v-for="mark in waitingMarks"
-          :key="mark.id"
-          class="wait-mark"
-          :style="{ left: `${scaleMonth(mark.months)}%`, bottom: `${mark.row * 8 + 16}px`, animationDelay: `${mark.delay}ms` }"
-        />
-        <div v-for="tick in ticks" :key="tick" class="month-tick" :style="{ left: `${scaleMonth(tick)}%` }">
-          <span>{{ tick === 30 ? '30+' : tick }}</span>
-        </div>
-        <strong>Waiting time (months)</strong>
+    <section v-if="filteredCompleted.length" class="primary-story" aria-live="polite">
+      <p class="result-sentence">Among <strong>{{ n(displayCount) }}</strong> similar completed applications, <strong>{{ successRate }}%</strong> were approved.</p>
+      <div class="result-legend">
+        <span><i class="approved-key" />Approved ({{ successRate }}%)</span>
+        <span><i class="rejected-key" />Rejected ({{ 100 - successRate }}%)</span>
+        <span>Overall success: <b>{{ overallRate }}%</b></span>
       </div>
-    </section>
 
-    <section v-if="filteredCompleted.length" class="data-section success-section">
-      <header class="section-intro">
-        <span>2. Success rate</span>
-        <p>Share of completed applications in your segment that were approved.</p>
-      </header>
-
-      <div class="rate-comparison" aria-label="Selected profile and overall success-rate comparison">
-        <div class="rate-headings" aria-hidden="true">
-          <span>Approved {{ successRate }}%</span>
-          <span>Rejected {{ 100 - successRate }}%</span>
-        </div>
-        <div class="rate-row">
-          <span>Your selected segment<small>({{ n(displayCount) }} completed)</small></span>
-          <div class="rate-bar">
-            <i class="approved-bar" :style="{ width: `${successRate}%` }"><b>{{ successRate }}%</b></i>
-            <i class="rejected-bar"><b>{{ 100 - successRate }}%</b></i>
-          </div>
-        </div>
-        <div class="rate-row">
-          <span>Overall (all completed cases)<small>({{ n(overallCount) }} completed)</small></span>
-          <div class="rate-bar">
-            <i class="approved-bar overall" :style="{ width: `${overallRate}%` }"><b>{{ overallRate }}%</b></i>
-            <i class="rejected-bar overall"><b>{{ 100 - overallRate }}%</b></i>
-          </div>
-        </div>
-        <p class="rate-delta" :class="{ negative: delta < 0 }">{{ comparisonText }} overall ({{ successRate }}% vs {{ overallRate }}%)</p>
+      <div class="story-insights">
+        <article><b>1</b><p>Median waiting time<strong>{{ median }} months</strong></p></article>
+        <article><b>2</b><p>Middle 50% of decisions<strong>{{ quartiles.q1 }}–{{ quartiles.q3 }} months</strong></p></article>
+        <article><b>3</b><p>Compared with overall<strong :class="{ negative: delta < 0 }">{{ deltaLabel }}</strong></p></article>
       </div>
+
+      <WaitingTimeJitter
+        :points="jitterPoints"
+        :median="Number(median)"
+        :q1="quartiles.q1"
+        :q3="quartiles.q3"
+      />
     </section>
 
     <p v-if="!filteredCompleted.length" class="sample-warning">No completed applications match this segment. Broaden your filters to see a reliable comparison.</p>
     <p v-else-if="filteredCompleted.length < 30" class="sample-warning">Small sample: broaden your filters before drawing conclusions.</p>
 
-    <footer id="methodology" class="methodology">
-      <UIcon name="i-lucide-file-text" />
-      <p><b>Methodology</b><br>Waiting time is measured from application submission to final decision. Success rate is the share approved among completed applications. Pending, withdrawn, and incomplete records are excluded. Community-submitted data is directional and is not an ICA prediction model.</p>
+    <footer id="methodology" class="infographic-methodology">
+      <b>Source &amp; methodology:</b> PRscope community database of completed PR applications. Waiting time runs from application to final decision. Success rate excludes pending and incomplete records. Community-submitted data is directional and is not an ICA prediction model.
     </footer>
   </main>
 </template>
@@ -163,19 +110,80 @@ const duration = (record: Rec) => {
   const end = timestamp(record.closed && record.closed !== 'None' ? record.closed : record.to)
   return start && end > start ? (end - start) / 2629800000 : 0
 }
-const haystack = (record: Rec) => normalise([record.text, record.applicationType, record.industry, record.yearsInSingapore, record.age, record.region].join(' '))
-const includesValue = (text: string, value: string) => text.includes(value.toLowerCase()) || text.includes(value.toLowerCase().replace('–', '-'))
-const matches = (record: Rec) => {
-  const text = haystack(record)
-  if (filters.applicantType !== 'All applicants' && !includesValue(text, filters.applicantType)) return false
-  if (filters.industry !== 'All industries') {
-    const selected = filters.industry.toLowerCase()
-    const known = ['technology', 'finance', 'healthcare', 'engineering']
-    if (selected === 'other' ? known.some(item => text.includes(item)) : !text.includes(selected)) return false
+const profileText = (record: Rec) => normalise([record.text, record.applicationType, record.industry, record.yearsInSingapore, record.age, record.region].join(' '))
+const hasAny = (text: string, values: string[]) => values.some(value => text.includes(value))
+const chineseNumber = (value: string) => {
+  const digits: Record<string, number> = { 零: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 }
+  if (value === '十') return 10
+  if (value.includes('十')) {
+    const [tens, ones] = value.split('十')
+    return (digits[tens] ?? 1) * 10 + (digits[ones] ?? 0)
   }
-  if (filters.tenure !== 'All tenures' && !includesValue(text, filters.tenure)) return false
-  if (filters.age !== 'All ages' && !includesValue(text, filters.age)) return false
-  if (filters.region !== 'All regions' && !includesValue(text, filters.region)) return false
+  return digits[value] ?? Number(value)
+}
+const firstNumber = (text: string, patterns: RegExp[]) => {
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match?.[1]) return chineseNumber(match[1])
+  }
+  return null
+}
+const applicationCategory = (record: Rec) => {
+  const text = profileText(record)
+  if (hasAny(text, ['family', '夫妻', '全家', '一家', '三口', '四口', '两口', '二口', '带娃', '带孩子', '+dp', 'spouse'])) return 'Family'
+  if (hasAny(text, ['individual', 'single', '单身', '个人申请', '独自申请', '未婚'])) return 'Individual'
+  return null
+}
+const industryCategory = (record: Rec) => {
+  const text = normalise(`${record.industry ?? ''} ${record.text ?? ''}`)
+  if (hasAny(text, ['technology', ' tech', '互联网', '科技', '软件', '程序员', '计算机', '数据科学', '人工智能', ' it '])) return 'Technology'
+  if (hasAny(text, ['finance', 'financial', 'fintech', '金融', '银行', '保险', '投行', '会计', '审计'])) return 'Finance'
+  if (hasAny(text, ['healthcare', 'medical', 'pharma', '医疗', '医药', '医生', '护士', '生物'])) return 'Healthcare'
+  if (hasAny(text, ['engineering', 'engineer', 'manufacturing', '工程', '制造', '半导体', '建筑', '机械', '电子'])) return 'Engineering'
+  return record.industry?.trim() ? 'Other' : null
+}
+const tenureCategory = (record: Rec) => {
+  const raw = normalise(record.yearsInSingapore)
+  const text = `${raw} ${normalise(record.text)}`
+  if (hasAny(raw, ['< 3', '<3'])) return '< 3 years'
+  if (hasAny(raw, ['3–5', '3-5'])) return '3–5 years'
+  if (hasAny(raw, ['6–10', '6-10'])) return '6–10 years'
+  if (hasAny(raw, ['10+', '>10'])) return '10+ years'
+  const years = firstNumber(text, [/(?:来新|在新|新加坡)(?:已)?\s*([0-9一二两三四五六七八九十]+)\s*年/, /([0-9一二两三四五六七八九十]+)\s*年(?:来新|在新|新加坡)/, /(?:tenure|years? in singapore)\D*([0-9]+)/])
+  if (years === null || !Number.isFinite(years)) return null
+  if (years < 3) return '< 3 years'
+  if (years <= 5) return '3–5 years'
+  if (years <= 10) return '6–10 years'
+  return '10+ years'
+}
+const ageCategory = (record: Rec) => {
+  const raw = normalise(record.age)
+  if (hasAny(raw, ['20–29', '20-29'])) return '20–29'
+  if (hasAny(raw, ['30–39', '30-39'])) return '30–39'
+  if (hasAny(raw, ['40–49', '40-49'])) return '40–49'
+  if (hasAny(raw, ['50+'])) return '50+'
+  const age = firstNumber(`${raw} ${normalise(record.text)}`, [/(?:age|年龄)\D*([0-9]{2})/, /([0-9]{2})\s*岁/])
+  if (age === null || age < 20) return null
+  if (age < 30) return '20–29'
+  if (age < 40) return '30–39'
+  if (age < 50) return '40–49'
+  return '50+'
+}
+const regionCategory = (record: Rec) => {
+  const explicit = normalise(record.region)
+  const text = `${explicit} ${normalise(record.text)}`
+  if (hasAny(text, ['asia', '中国', '大陆', '香港', '台湾', '马来西亚', '印度', '印尼', '越南', '菲律宾', '日本', '韩国', 'china', 'malaysia', 'india', 'indonesia', 'vietnam', 'philippines', 'japan', 'korea'])) return 'Asia'
+  if (hasAny(text, ['europe', '英国', '法国', '德国', '意大利', '西班牙', '荷兰', 'uk', 'british', 'france', 'germany'])) return 'Europe'
+  if (hasAny(text, ['americas', '美国', '加拿大', '巴西', '墨西哥', 'usa', 'canada', 'brazil', 'mexico'])) return 'Americas'
+  if (hasAny(text, ['australia', 'new zealand', 'middle east', 'africa', '澳洲', '澳大利亚', '新西兰', '中东', '非洲'])) return 'Other'
+  return explicit ? 'Other' : null
+}
+const matches = (record: Rec) => {
+  if (filters.applicantType !== 'All applicants' && applicationCategory(record) !== filters.applicantType) return false
+  if (filters.industry !== 'All industries' && industryCategory(record) !== filters.industry) return false
+  if (filters.tenure !== 'All tenures' && tenureCategory(record) !== filters.tenure) return false
+  if (filters.age !== 'All ages' && ageCategory(record) !== filters.age) return false
+  if (filters.region !== 'All regions' && regionCategory(record) !== filters.region) return false
   return true
 }
 
@@ -190,30 +198,15 @@ const percentile = (values: number[], point: number) => {
   const fraction = index - lower
   return values[lower] + ((values[lower + 1] ?? values[lower]) - values[lower]) * fraction
 }
-const median = computed(() => (percentile(activeDurations.value, .5) || 7.4).toFixed(1))
-const quartiles = computed(() => ({ q1: Number((percentile(activeDurations.value, .25) || 4.1).toFixed(1)), q3: Number((percentile(activeDurations.value, .75) || 11.8).toFixed(1)) }))
-const eightyPercent = computed(() => Number((percentile(activeDurations.value, .8) || 15.7).toFixed(1)))
+const median = computed(() => percentile(activeDurations.value, .5).toFixed(1))
+const quartiles = computed(() => ({ q1: Number(percentile(activeDurations.value, .25).toFixed(1)), q3: Number(percentile(activeDurations.value, .75).toFixed(1)) }))
 const rateFor = (items: Rec[]) => Math.round(items.filter(isApproved).length / Math.max(1, items.length) * 100)
-const successRate = computed(() => rateFor(activeData.value) || 64)
-const overallRate = computed(() => records.value.length ? rateFor(completed.value) : 57)
+const successRate = computed(() => rateFor(activeData.value))
+const overallRate = computed(() => rateFor(completed.value))
 const displayCount = computed(() => filteredCompleted.value.length)
-const overallCount = computed(() => records.value.length ? completed.value.length : 4912)
 const delta = computed(() => successRate.value - overallRate.value)
-const comparisonText = computed(() => delta.value === 0 ? 'The same as' : `${delta.value > 0 ? '+' : '−'}${Math.abs(delta.value)} percentage points ${delta.value > 0 ? 'higher than' : 'lower than'}`)
-
-const scaleMonth = (month: number) => Math.min(100, Math.max(0, month / 30 * 100))
-const ticks = Array.from({ length: 16 }, (_, index) => index * 2)
-const rangeStyle = computed(() => ({ left: `${scaleMonth(quartiles.value.q1)}%`, width: `${scaleMonth(quartiles.value.q3) - scaleMonth(quartiles.value.q1)}%` }))
-const waitingMarks = computed(() => {
-  const buckets = new Map<number, number>()
-  return activeData.value.slice(0, 180).map((record, index) => {
-    const months = Math.min(30, duration(record))
-    const bucket = Math.round(months)
-    const row = buckets.get(bucket) ?? 0
-    buckets.set(bucket, row + 1)
-    return { id: record.id, months, row: Math.min(row, 13), delay: Math.min(index * 5, 650) }
-  })
-})
+const deltaLabel = computed(() => delta.value === 0 ? 'Same approval rate' : `${delta.value > 0 ? '+' : '−'}${Math.abs(delta.value)} percentage points`)
+const jitterPoints = computed(() => activeData.value.slice(0, 180).map(record => ({ months: duration(record), approved: isApproved(record) })))
 
 const n = (value: number) => new Intl.NumberFormat('en-SG').format(value)
 const resetFilters = () => Object.assign(filters, { applicantType: 'All applicants', industry: 'All industries', tenure: 'All tenures', age: 'All ages', region: 'All regions' })
@@ -229,11 +222,11 @@ onMounted(() => {
       closed: String(item.close_dt ?? ''),
       to: String(item.update_ts ?? item.to ?? item.updatedAt ?? ''),
       text: String(item.text ?? item.profile ?? item.description ?? ''),
-      applicationType: String(item.applicationType ?? item.application_type ?? ''),
+      applicationType: String(item.applicationType ?? item.application_type ?? item.applicationTypeLabel ?? ''),
       industry: String(item.industry ?? item.occupation ?? ''),
       yearsInSingapore: String(item.yearsInSingapore ?? item.local_tenure ?? ''),
       age: String(item.age ?? item.age_band ?? ''),
-      region: String(item.region ?? item.nationality_region ?? ''),
+      region: String(item.region ?? item.nationality_region ?? item.nationality ?? item.country ?? ''),
     })) : []
     error.value = false
   }, () => { error.value = true })
