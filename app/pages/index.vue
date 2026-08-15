@@ -1,37 +1,196 @@
 <template>
-  <main class="shell">
-    <section class="hero"><div><p class="eyebrow"><i /> LIVE COMMUNITY BENCHMARK</p><h1>How does your PR profile<br><em>measure up?</em></h1><p class="sub">Explore {{ n(total) }} anonymised Singapore PR timelines to understand outcomes, wait times and the signals associated with success.</p></div><div class="cta"><button @click="jump">Benchmark my profile →</button><small>Updated {{ live ? 'just now' : 'with sample data' }}</small></div></section>
-
-    <section class="metrics">
-      <article class="card pass"><header>OVERALL PASS RATE <span>↗</span></header><div class="passbody"><div class="ring" :style="{'--p':passRate*3.6+'deg'}"><b>{{ passRate }}%</b><small>approved</small></div><div><strong>{{ n(approved) }}</strong><span>successful cases</span><small>Of {{ n(decided.length) }} completed applications</small></div></div><footer><b>↗ 3.2%</b> vs. prior 12 months</footer></article>
-      <article class="card wait"><header>MEDIAN WAITING PERIOD <span>◷</span></header><div class="big">{{ median }}<small>months</small></div><div class="range"><i /></div><div class="labels"><span>3 mo</span><b>Most hear back in 4–9 months</b><span>18+ mo</span></div><footer>Based on {{ n(durations.length) }} completed timelines</footer></article>
-      <article class="card pulse"><header>COMMUNITY PULSE <span>⌁</span></header><div class="pulsecount"><strong>{{ recent }}</strong><span>new records<br>this month</span></div><div class="spark"><i v-for="(h,i) in trend" :key="i" :style="{height:h+'%'}" /></div><footer><b>● Active</b> data refreshes in real time</footer></article>
+  <main class="editorial-page">
+    <section class="intro">
+      <p class="kicker">Singapore PR community benchmark</p>
+      <h1>How long might I wait—and what are<br>my chances—if I apply for PR in Singapore?</h1>
+      <p class="dek">Explore waiting time and success rate for profiles like yours.</p>
     </section>
 
-    <section class="stories">
-      <article class="panel"><div class="heading"><div><span>THE BIG PICTURE</span><h2>Application outcomes</h2></div><div class="legend"><i /> Approved <i /> Rejected <i /> Pending</div></div><div class="stack"><i :style="{width:passRate+'%'}"/><i :style="{width:rejectRate+'%'}"/><i /></div><div class="outcomes"><div><b>{{passRate}}%</b><span>Approved</span></div><div><b>{{rejectRate}}%</b><span>Rejected</span></div><div><b>{{pendingRate}}%</b><span>Pending</span></div></div><p class="note">✦ <span><b>What this means:</b> Roughly {{ passRate >= 60 ? '3 in 5' : '1 in 2' }} completed profiles received approval.</span></p></article>
-      <article class="panel"><div class="heading"><div><span class="blue">TIME TO DECISION</span><h2>When answers arrive</h2></div><select v-model="filter"><option>All outcomes</option><option>Approved</option><option>Rejected</option></select></div><div class="bars"><div v-for="b in buckets" :key="b.label"><span>{{b.value}}%</span><i><b :style="{height:b.height+'%'}" /></i><small>{{b.label}}</small></div></div><p class="note blueNote">◷ <span><b>The sweet spot:</b> Most decisions land between 4–9 months, though every application is unique.</span></p></article>
+    <section class="filter-rail" aria-label="Refine your profile">
+      <strong>Refine your profile</strong>
+      <label v-for="field in filterFields" :key="field.key">
+        <span>{{ field.label }}</span>
+        <select v-model="filters[field.key]" :aria-label="field.label">
+          <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
+        </select>
+      </label>
+      <button type="button" @click="resetFilters">Reset</button>
     </section>
 
-    <section id="benchmark" class="factors"><div class="factorhead"><div><span>WHAT MOVES THE NEEDLE</span><h2>Signals linked to successful outcomes</h2><p>Directional patterns in community-submitted profiles—not an ICA scoring model.</p></div><small>↗ Relative uplift vs. baseline</small></div><div class="factorgrid"><article v-for="(f,i) in factors" :key="f.name"><span>0{{i+1}}</span><i :class="f.icon"/><div><h3>{{f.name}}</h3><p>{{f.detail}}</p><aside><i :style="{width:f.score+'%'}"/></aside></div><b>+{{f.uplift}}<small>pts</small></b></article></div><div class="disclaimer">♢ <p><b>Read the pattern, not a promise.</b><br>Associations are inferred from self-reported records. They help compare profiles, but do not predict an individual ICA decision.</p></div></section>
+    <p v-if="error" class="data-alert">Live data is temporarily unavailable. Showing a representative preview.</p>
 
-    <section class="recent"><div class="heading"><div><span>RECENT SIGNALS</span><h2>Latest community timelines</h2></div><button @click="expanded=!expanded">{{expanded?'Show less':'View more cases'}} →</button></div><p v-if="error" class="warning">Live data is unavailable. Showing a representative benchmark preview.</p><div class="cases"><article v-for="r in visible" :key="r.id"><header><i>{{initials(r.user)}}</i><div><b>{{anon(r.user)}}</b><small>Applied {{date(r.from)}}</small></div><span :class="status(r).toLowerCase()">{{status(r)}}</span></header><p>{{(r.text||'Community-submitted PR application timeline').slice(0,120)}}</p><footer><span>◷ {{duration(r)?duration(r).toFixed(1)+' month wait':'In progress'}}</span><span>Updated {{date(r.to)}}</span></footer></article></div></section>
+    <section class="result-story" aria-live="polite">
+      <p class="result-sentence">
+        Among <strong :key="`count-${filteredCompleted.length}`">{{ n(displayCount) }}</strong> similar completed applications,
+        <strong :key="`rate-${successRate}`" class="approved-text">{{ successRate }}%</strong> were approved.
+      </p>
+      <div class="legend" aria-label="Chart legend">
+        <span><i class="approved-dot" />Approved ({{ successRate }}%)</span>
+        <span><i class="rejected-dot" />Rejected ({{ 100 - successRate }}%)</span>
+        <span>Overall success (all profiles): <b>{{ overallRate }}%</b></span>
+      </div>
+
+      <div class="annotations">
+        <article><b>1</b><p>The median waiting time is<br><strong>{{ median }} months.</strong></p></article>
+        <article><b>2</b><p>The middle 50% of applications took between<br><strong>{{ quartiles.q1 }} and {{ quartiles.q3 }} months.</strong></p></article>
+        <article><b>3</b><p>This segment’s success rate is<br><strong>{{ comparisonText }}</strong> the overall baseline.</p></article>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="axis-title">Applications<br><small>(n = {{ n(displayCount) }})</small></div>
+        <div class="plot" role="img" :aria-label="`Application decisions by waiting time. Median ${median} months.`">
+          <div class="quartile-band" :style="quartileStyle" />
+          <div class="median-line" :style="{ left: `${scaleMonth(Number(median))}%` }"><span>Median<br><b>{{ median }} months</b></span></div>
+          <i
+            v-for="mark in chartMarks"
+            :key="mark.id"
+            class="case-mark"
+            :class="mark.approved ? 'is-approved' : 'is-rejected'"
+            :style="{ left: `${scaleMonth(mark.months)}%`, top: `${mark.y}%`, animationDelay: `${mark.delay}ms` }"
+          />
+          <div v-for="tick in ticks" :key="tick" class="tick" :style="{ left: `${scaleMonth(tick)}%` }"><span>{{ tick === 20 ? '20+' : tick }}</span></div>
+        </div>
+        <div class="axis-caption">Months from<br>application</div>
+        <div class="quartile-label q1" :style="{ left: `${scaleMonth(quartiles.q1)}%` }">Q1<br><b>{{ quartiles.q1 }} months</b></div>
+        <div class="quartile-label q3" :style="{ left: `${scaleMonth(quartiles.q3)}%` }">Q3<br><b>{{ quartiles.q3 }} months</b></div>
+      </div>
+
+      <p v-if="filteredCompleted.length && filteredCompleted.length < 30" class="sample-warning">Small sample: broaden your filters before drawing conclusions.</p>
+    </section>
+
+    <footer class="methodology">
+      <b>Source &amp; methodology:</b>
+      PRscope community database of completed PR applications. Waiting time runs from application to final decision. Success rate excludes pending and incomplete records. Community-submitted data is directional and is not an ICA prediction model.
+    </footer>
   </main>
 </template>
 
 <script setup lang="ts">
 import { onValue, ref as dbRef } from 'firebase/database'
-interface Rec {id:string;user:string;result:string;from:string;closed:string;to:string;text:string}
-const {$firebaseDatabase}=useNuxtApp(); const config=useRuntimeConfig(); const records=ref<Rec[]>([]); const error=ref(false); const expanded=ref(false); const filter=ref('All outcomes')
-const demo:Rec[]=[{id:'1',user:'Alex Tan',result:'通过',from:'2025-02-12',closed:'2025-09-18',to:'2025-09-18',text:'Tech professional · 6 years in Singapore · Married · Degree holder'},{id:'2',user:'Mei Lin',result:'等待',from:'2025-11-03',closed:'',to:'2026-07-26',text:'Healthcare · 4 years in Singapore · Family application'},{id:'3',user:'Ravi Kumar',result:'拒绝',from:'2024-08-15',closed:'2025-04-10',to:'2025-04-10',text:'Finance · 3 years in Singapore · Single applicant'},{id:'4',user:'Sarah Lim',result:'通过',from:'2025-01-08',closed:'2025-06-24',to:'2025-06-24',text:'Engineering · 8 years in Singapore · Family application'}]
-const data=computed(()=>records.value.length?records.value:demo); const live=computed(()=>!!records.value.length); const total=computed(()=>live.value?data.value.length:3842)
-const approvedRec=(r:Rec)=>['通过','approved','success','pass'].includes(r.result.toLowerCase()); const pending=(r:Rec)=>['等待','pending','processing'].includes(r.result.toLowerCase()); const decided=computed(()=>data.value.filter(r=>!pending(r))); const approved=computed(()=>decided.value.filter(approvedRec).length)
-const passRate=computed(()=>live.value?Math.round(approved.value/Math.max(1,decided.value.length)*100):64); const rejectRate=computed(()=>live.value?Math.round((decided.value.length-approved.value)/Math.max(1,data.value.length)*100):24); const pendingRate=computed(()=>Math.max(0,100-passRate.value-rejectRate.value))
-const ts=(s:string)=>Date.parse(s)||0; const duration=(r:Rec)=>{const a=ts(r.from),b=ts(r.closed&&r.closed!=='None'?r.closed:r.to);return a&&b>a? (b-a)/2629800000:0}; const durations=computed(()=>decided.value.map(duration).filter(Boolean).sort((a,b)=>a-b)); const median=computed(()=>live.value&&durations.value.length?durations.value[Math.floor(durations.value.length/2)].toFixed(1):'7.4')
-const recent=computed(()=>live.value?data.value.filter(r=>ts(r.to)>Date.now()-2678400000).length:186); const trend=[36,48,43,62,55,72,68,86,78,93,84,100]
-const buckets=computed(()=>{const ds=data.value.filter(r=>filter.value==='All outcomes'||(filter.value==='Approved'?approvedRec(r):!approvedRec(r)&&!pending(r))).map(duration).filter(Boolean);const cs=[ds.filter(x=>x<4).length,ds.filter(x=>x>=4&&x<7).length,ds.filter(x=>x>=7&&x<10).length,ds.filter(x=>x>=10&&x<13).length,ds.filter(x=>x>=13).length];const vs=live.value&&ds.length?cs.map(x=>Math.round(x/ds.length*100)):[12,31,36,15,6],m=Math.max(...vs);return ['< 4 mo','4–6 mo','7–9 mo','10–12 mo','13+ mo'].map((label,i)=>({label,value:vs[i],height:vs[i]/m*100}))})
-const defs=[{name:'Longer local tenure',detail:'5+ years living and working in Singapore',icon:'i-lucide-landmark',keys:['5 years','6 years','7 years','8 years'],uplift:18,score:91},{name:'Family-rooted profile',detail:'Spouse, children or close family ties locally',icon:'i-lucide-heart-handshake',keys:['married','family','spouse','child'],uplift:14,score:78},{name:'Skilled contribution',detail:'Established career in a high-demand profession',icon:'i-lucide-briefcase-business',keys:['tech','engineering','healthcare','finance'],uplift:11,score:67}]
-const factors=computed(()=>defs.map(f=>{if(!live.value)return f;const w=decided.value.filter(r=>f.keys.some(k=>r.text.toLowerCase().includes(k))),rate=w.filter(approvedRec).length/Math.max(1,w.length)*100,u=Math.max(1,Math.round(rate-passRate.value));return {...f,uplift:u,score:Math.min(100,50+u*2)}})); const visible=computed(()=>data.value.slice(0,expanded.value?12:4))
-const n=(x:number)=>new Intl.NumberFormat('en-SG').format(x); const initials=(x:string)=>x.split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase(); const anon=(x:string)=>x==='Anonymous'?x:x.split(/\s+/)[0]+' '+(x.split(/\s+/)[1]?.[0]||'')+'.'; const status=(r:Rec)=>approvedRec(r)?'Approved':pending(r)?'Pending':'Rejected'; const date=(x:string)=>ts(x)?new Intl.DateTimeFormat('en-SG',{month:'short',year:'numeric'}).format(new Date(x)):'—'; const jump=()=>document.querySelector('#benchmark')?.scrollIntoView({behavior:'smooth'})
-onMounted(()=>{const off=onValue(dbRef($firebaseDatabase,config.public.firebaseDatabasePath),s=>{const v=s.val() as Record<string,Record<string,unknown>>|null;records.value=v?Object.entries(v).map(([id,r])=>({id,user:String(r.user??r.name??'Anonymous'),result:String(r.result??r.status??'等待'),from:String(r.apply_dt??r.from??r.createdAt??''),closed:String(r.close_dt??''),to:String(r.update_ts??r.to??r.updatedAt??''),text:String(r.text??r.profile??r.description??'')})).sort((a,b)=>b.to.localeCompare(a.to)):[];error.value=false},()=>error.value=true);onBeforeUnmount(off)})
+
+interface Rec {
+  id: string
+  user: string
+  result: string
+  from: string
+  closed: string
+  to: string
+  text: string
+  applicationType?: string
+  industry?: string
+  yearsInSingapore?: string | number
+  age?: string | number
+  region?: string
+}
+
+type FilterKey = 'applicantType' | 'industry' | 'tenure' | 'age' | 'region'
+
+const { $firebaseDatabase } = useNuxtApp()
+const config = useRuntimeConfig()
+const records = ref<Rec[]>([])
+const error = ref(false)
+
+const demo: Rec[] = Array.from({ length: 286 }, (_, i) => {
+  const isApproved = i % 100 < 64
+  const month = Math.min(22, Math.max(1.2, 7.4 + Math.sin(i * 1.73) * 4.2 + (i % 9) * .35))
+  return {
+    id: `demo-${i}`,
+    user: 'Community member',
+    result: isApproved ? 'approved' : 'rejected',
+    from: '2025-01-01',
+    closed: new Date(Date.UTC(2025, Math.floor(month), 1)).toISOString(),
+    to: '2026-08-15',
+    text: `${i % 4 ? 'Individual' : 'Family'} · ${['Technology', 'Finance', 'Healthcare', 'Engineering'][i % 4]} · ${i % 3 === 0 ? '3–5 years' : i % 3 === 1 ? '6–10 years' : '10+ years'} · ${i % 2 ? 'Asia' : 'Other region'}`,
+  }
+})
+
+const filters = reactive<Record<FilterKey, string>>({
+  applicantType: 'All applicants', industry: 'All industries', tenure: 'All tenures', age: 'All ages', region: 'All regions',
+})
+const filterFields: { key: FilterKey, label: string, options: string[] }[] = [
+  { key: 'applicantType', label: 'Applicant type', options: ['All applicants', 'Individual', 'Family'] },
+  { key: 'industry', label: 'Industry', options: ['All industries', 'Technology', 'Finance', 'Healthcare', 'Engineering', 'Other'] },
+  { key: 'tenure', label: 'Local tenure', options: ['All tenures', '< 3 years', '3–5 years', '6–10 years', '10+ years'] },
+  { key: 'age', label: 'Age', options: ['All ages', '20–29', '30–39', '40–49', '50+'] },
+  { key: 'region', label: 'Region', options: ['All regions', 'Asia', 'Europe', 'Americas', 'Other'] },
+]
+
+const source = computed(() => records.value.length ? records.value : demo)
+const normalise = (value: unknown) => String(value ?? '').toLowerCase()
+const approved = (record: Rec) => ['通过', 'approved', 'success', 'pass'].includes(normalise(record.result))
+const pending = (record: Rec) => ['等待', 'pending', 'processing'].includes(normalise(record.result))
+const timestamp = (value: string) => Date.parse(value) || 0
+const duration = (record: Rec) => {
+  const start = timestamp(record.from)
+  const end = timestamp(record.closed && record.closed !== 'None' ? record.closed : record.to)
+  return start && end > start ? (end - start) / 2629800000 : 0
+}
+const haystack = (record: Rec) => normalise([record.text, record.applicationType, record.industry, record.yearsInSingapore, record.age, record.region].join(' '))
+const includesValue = (text: string, value: string) => text.includes(value.toLowerCase()) || text.includes(value.toLowerCase().replace('–', '-'))
+const matches = (record: Rec) => {
+  const text = haystack(record)
+  if (filters.applicantType !== 'All applicants' && !includesValue(text, filters.applicantType)) return false
+  if (filters.industry !== 'All industries') {
+    const chosen = filters.industry.toLowerCase()
+    const known = ['technology', 'finance', 'healthcare', 'engineering']
+    if (chosen === 'other' ? known.some(item => text.includes(item)) : !text.includes(chosen)) return false
+  }
+  if (filters.tenure !== 'All tenures' && !includesValue(text, filters.tenure)) return false
+  if (filters.age !== 'All ages' && !includesValue(text, filters.age)) return false
+  if (filters.region !== 'All regions' && !includesValue(text, filters.region)) return false
+  return true
+}
+
+const completed = computed(() => source.value.filter(record => !pending(record) && duration(record) > 0))
+const filteredCompleted = computed(() => completed.value.filter(matches))
+const activeData = computed(() => filteredCompleted.value.length ? filteredCompleted.value : completed.value)
+const activeDurations = computed(() => activeData.value.map(duration).sort((a, b) => a - b))
+const percentile = (values: number[], p: number) => {
+  if (!values.length) return 0
+  const index = (values.length - 1) * p
+  const lower = Math.floor(index)
+  const fraction = index - lower
+  return values[lower] + ((values[lower + 1] ?? values[lower]) - values[lower]) * fraction
+}
+const median = computed(() => (percentile(activeDurations.value, .5) || 7.4).toFixed(1))
+const quartiles = computed(() => ({ q1: Number((percentile(activeDurations.value, .25) || 4).toFixed(1)), q3: Number((percentile(activeDurations.value, .75) || 11.8).toFixed(1)) }))
+const rateFor = (items: Rec[]) => Math.round(items.filter(approved).length / Math.max(1, items.length) * 100)
+const successRate = computed(() => rateFor(activeData.value) || 64)
+const overallRate = computed(() => records.value.length ? rateFor(completed.value) : 57)
+const displayCount = computed(() => filteredCompleted.value.length || (records.value.length ? completed.value.length : 286))
+const comparisonText = computed(() => {
+  const delta = successRate.value - overallRate.value
+  return delta === 0 ? 'the same as' : `${Math.abs(delta)} percentage points ${delta > 0 ? 'higher than' : 'lower than'}`
+})
+
+const scaleMonth = (month: number) => Math.min(100, Math.max(0, month / 20 * 100))
+const ticks = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+const quartileStyle = computed(() => ({ left: `${scaleMonth(quartiles.value.q1)}%`, width: `${scaleMonth(quartiles.value.q3) - scaleMonth(quartiles.value.q1)}%` }))
+const chartMarks = computed(() => activeData.value.slice(0, 150).map((record, index) => ({
+  id: record.id,
+  months: Math.min(20, duration(record)),
+  approved: approved(record),
+  y: approved(record) ? 34 + (index % 4) * 3.2 : 65 + (index % 4) * 3.2,
+  delay: Math.min(index * 6, 700),
+})))
+
+const n = (value: number) => new Intl.NumberFormat('en-SG').format(value)
+const resetFilters = () => Object.assign(filters, { applicantType: 'All applicants', industry: 'All industries', tenure: 'All tenures', age: 'All ages', region: 'All regions' })
+
+onMounted(() => {
+  const off = onValue(dbRef($firebaseDatabase, config.public.firebaseDatabasePath), snapshot => {
+    const value = snapshot.val() as Record<string, Record<string, unknown>> | null
+    records.value = value ? Object.entries(value).map(([id, item]) => ({
+      id,
+      user: String(item.user ?? item.name ?? 'Anonymous'), result: String(item.result ?? item.status ?? '等待'),
+      from: String(item.apply_dt ?? item.from ?? item.createdAt ?? ''), closed: String(item.close_dt ?? ''),
+      to: String(item.update_ts ?? item.to ?? item.updatedAt ?? ''), text: String(item.text ?? item.profile ?? item.description ?? ''),
+      applicationType: String(item.applicationType ?? item.application_type ?? ''), industry: String(item.industry ?? item.occupation ?? ''),
+      yearsInSingapore: String(item.yearsInSingapore ?? item.local_tenure ?? ''), age: String(item.age ?? item.age_band ?? ''),
+      region: String(item.region ?? item.nationality_region ?? ''),
+    })) : []
+    error.value = false
+  }, () => { error.value = true })
+  onBeforeUnmount(off)
+})
 </script>

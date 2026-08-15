@@ -1,1 +1,10 @@
-<template><div><header class="top"><a class="brand" href="#"><i>SG</i><b>PR<em>scope</em></b></a><nav><a href="#">Overview</a><a href="#benchmark">Success signals</a><a href="#benchmark">Methodology</a></nav><div><span>♢ Privacy-first data</span><a href="#benchmark">Share your timeline ↗</a></div></header><slot/><footer class="foot"><span>PRscope</span><p>Community intelligence for a more confident PR journey.</p><small>Not affiliated with Singapore ICA.</small></footer></div></template>
+<template>
+  <div>
+    <header class="masthead">
+      <a class="wordmark" href="#">PRscope</a>
+      <span>Singapore PR community benchmark</span>
+      <time datetime="2026-08-15">Updated August 15, 2026</time>
+    </header>
+    <slot />
+  </div>
+</template>

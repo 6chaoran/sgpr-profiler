@@ -5,8 +5,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
   css: ['~/assets/css/main.css'],
   app: { head: { title: 'PRscope — Singapore PR Community Benchmark', meta: [
-    { name: 'description', content: 'Explore anonymised Singapore PR outcomes, waiting periods and profile signals.' },
-    { name: 'theme-color', content: '#142a27' },
+    { name: 'description', content: 'Explore Singapore PR waiting times and success rates for profiles like yours.' },
+    { name: 'theme-color', content: '#fbfaf6' },
   ] } },
   fonts: {
     provider: 'local',
