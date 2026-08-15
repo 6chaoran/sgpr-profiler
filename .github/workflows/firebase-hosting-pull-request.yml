@@ -29,4 +29,5 @@ jobs:
       - name: Smoke test deployed preview
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.details_url }}
-        run: curl --fail --location --retry 5 --retry-all-errors --silent --show-error --output /dev/null "$DEPLOY_URL"
+          EXPECTED_TITLE: <title>PRscope — Singapore PR Community Benchmark</title>
+        run: curl --fail --location --retry 5 --retry-all-errors --silent --show-error "$DEPLOY_URL" | grep --fixed-strings --quiet "$EXPECTED_TITLE"

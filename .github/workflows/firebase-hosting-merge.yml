@@ -31,4 +31,6 @@ jobs:
           channelId: live
           projectId: sgprapp
       - name: Smoke test deployed site
-        run: curl --fail --location --retry 5 --retry-all-errors --silent --show-error --output /dev/null https://sgprapp.web.app/
+        env:
+          EXPECTED_TITLE: <title>PRscope — Singapore PR Community Benchmark</title>
+        run: curl --fail --location --retry 5 --retry-all-errors --silent --show-error https://sgprapp.web.app/ | grep --fixed-strings --quiet "$EXPECTED_TITLE"
